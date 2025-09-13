@@ -4,7 +4,7 @@ import "net"
 
 //Message hold any arbitary data that is being sent
 //over the transport between 2 nodes in the network
-type Message struct{
+type RPC struct{
 
 	From net.Addr 
 	// A standardized envelope for all your network communications

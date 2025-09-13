@@ -11,7 +11,7 @@ import (
 //you must hava a function Decode that takes
 //in an io.Reader and a pointer to Message
 type Decode interface {
-	Decode(io.Reader, *Message) error
+	Decode(io.Reader, *RPC) error
 }
 
 
@@ -19,7 +19,7 @@ type Decode interface {
 // useful for comm bw 2 Go programs
 type GOBDecoder struct{}
 
-func (dec GOBDecoder) Decode(r io.Reader, msg *Message) error{
+func (dec GOBDecoder) Decode(r io.Reader, msg *RPC) error{
 
 	return gob.NewDecoder(r).Decode(msg)
 }
@@ -28,7 +28,7 @@ func (dec GOBDecoder) Decode(r io.Reader, msg *Message) error{
 //Reads the message stream and places it in the Payload field
 type DefaultDecoder struct{}
 
-func (dec DefaultDecoder) Decode(r io.Reader, msg *Message) error{
+func (dec DefaultDecoder) Decode(r io.Reader, msg *RPC) error{
 	
 	buf := make([]byte, 1028)
 

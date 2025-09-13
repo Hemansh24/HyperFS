@@ -4,6 +4,8 @@ package p2p
 //anyone that we connect to or that connects to us is a peer
 type Peer interface{
 
+	Close() error 
+
 }
 
 //Transport is anything that handles the communication
@@ -13,5 +15,10 @@ type Peer interface{
 type Transport interface{
 
 	ListenAndAccept() error
+
+	// This is a method for receiving messages from the network
+	// returns a recieve only channel which will deliver messages
+	//of RPC type
+	Consume() <- chan RPC
 
 }

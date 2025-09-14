@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 )
 
@@ -10,20 +9,25 @@ func TestTransformFunc(t *testing.T) {
 
 	key := "mykey"
 
-	pathName := CASPathTransformFunc(key)
+	pathKey := CASPathTransformFunc(key)
 
-	fmt.Println("Path Name: ", pathName)
 
-	expectedPath := "816cc/20437/d8595/38736/e1ef4/6558b/7bda4/86c06"
+	expectedOriginalKey := "816cc20437d859538736e1ef46558b7bda486c06"
 
-	if pathName != expectedPath{
-		t.Errorf("have %s want %s", pathName, expectedPath)
+	expectedPathName := "816cc/20437/d8595/38736/e1ef4/6558b/7bda4/86c06"
+
+	if pathKey.PathName != expectedPathName{
+		t.Errorf("have %s want %s", pathKey.PathName, expectedPathName)
+	}
+
+	if pathKey.Filename != expectedPathName{
+		t.Errorf("have %s want %s", pathKey.Filename, expectedOriginalKey)
 	}
 }
 
 func TestStore(t *testing.T) {
 	opts := StoreOpts{
-		PathTransformFunc: DefaultPathTransformFunc,
+		PathTransformFunc: CASPathTransformFunc,
 	}
 
 	s := NewStore(opts)

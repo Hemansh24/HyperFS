@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -11,7 +12,7 @@ import (
 
 //Content Addressable Storage
 //
-func CASPathTransformFunc(key string) string{
+func CASPathTransformFunc(key string) PathKey{
 
 	//hashes the key using sha1
 	hash := sha1.Sum([]byte(key)) //[20]byte -> []byte : [:]
@@ -40,13 +41,25 @@ func CASPathTransformFunc(key string) string{
 		
 	}
 
-	//join the paths with "/" to make a directory structure
-	return strings.Join(paths, "/")
+	return PathKey{
+		PathName : strings.Join(paths, "/"),
+		Filename: hashStr,
+	}
+
 }	
 
 
 //takes a key and transforms it into a path
-type PathTransformFunc func(string) string
+type PathTransformFunc func(string) PathKey
+
+type PathKey struct{
+	PathName string
+	Filename string
+}
+
+func (p PathKey) FullPath() string{
+	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
+}
 
 //options for the store
 type StoreOpts struct {
@@ -71,23 +84,32 @@ func NewStore(opts StoreOpts) *Store{
 	}
 }
 
+func (s *Store) readStream(key string) (io.Reader, error){
+	PathKey := s.PathTransformFunc(key)
+
+	f, err := os.Open(PathKey.FullPath())
+
+	if err != nil{
+		return nil, err
+	}
+	
+}
+
 func (s *Store) writeStream(key string, r io.Reader) error{
 
 	//transform the key into a path
-	pathName := s.PathTransformFunc(key)
+	pathKey := s.PathTransformFunc(key)
 
 	//MKdirAll makes the directory if it does not exist using
 	//the path name as the directory name
 	//os.ModePerm uses the default permissions which are read write execute
-	if err := os.MkdirAll(pathName, os.ModePerm); err != nil{
+	if err := os.MkdirAll(pathKey.PathName, os.ModePerm); err != nil{
 		return err
 	}
 
-	filename := "somefilename"
+	fullPath := pathKey.FullPath()
 
-	pathAndFilename := pathName + "/" + filename
-
-	f, err := os.Create(pathAndFilename)
+	f, err := os.Create(fullPath)
 
 	if err != nil{
 		return err
@@ -99,7 +121,8 @@ func (s *Store) writeStream(key string, r io.Reader) error{
 		return err
 	}
 
-	log.Printf("written (%d) bytes to disk: %s", n, pathAndFilename)
+	log.Printf("written (%d) bytes to disk: %s", n, fullPath)
 
 	return nil
 }
+

@@ -12,8 +12,9 @@ import (
 	"strings"
 )
 
+
+
 //Content Addressable Storage
-//
 func CASPathTransformFunc(key string) PathKey{
 
 	//hashes the key using sha1
@@ -59,18 +60,33 @@ type PathKey struct{
 	Filename string
 }
 
+func (p PathKey) FirstPathName() string {
+	paths := strings.Split(p.PathName, "/")
+
+	if len(paths) == 0{
+		return ""
+	}
+	return paths[0]
+}
+
 func (p PathKey) FullPath() string{
 	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
 }
 
 //options for the store
 type StoreOpts struct {
-	PathTransformFunc  PathTransformFunc
+	//Root is the folder name of the root, containing
+	//all the folders/files of the system
+	Root 				string
+	PathTransformFunc  	PathTransformFunc
 }
 
 //does not transform the path, just returns the key as is
-var DefaultPathTransformFunc = func(key string) string{
-	return key
+var DefaultPathTransformFunc = func(key string) PathKey{
+	return PathKey{
+		PathName: key,
+		Filename: key,
+	}
 }
 
 //the main store structure
@@ -81,6 +97,10 @@ type Store struct {
 
 //Constructor for strore
 func NewStore(opts StoreOpts) *Store{
+
+	if opts.PathTransformFunc == nil{
+		opts.PathTransformFunc = DefaultPathTransformFunc
+	}
 	return &Store{
 		StoreOpts : opts,
 	}
@@ -107,7 +127,7 @@ func (s *Store) Delete(key string) error{
 	}()
 	
 	//os.RemoveAll removes the entire directory tree
-	return os.RemoveAll(pathKey.FullPath())
+	return os.RemoveAll(pathKey.FirstPathName())
 }
 
 

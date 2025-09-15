@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -84,15 +86,54 @@ func NewStore(opts StoreOpts) *Store{
 	}
 }
 
-func (s *Store) readStream(key string) (io.Reader, error){
-	PathKey := s.PathTransformFunc(key)
+func (s *Store) Has(key string) bool{
+	pathKey := s.PathTransformFunc(key)
 
-	f, err := os.Open(PathKey.FullPath())
+	_, err := os.Stat(pathKey.FullPath())
+
+	if err == fs.ErrNotExist{
+		return false
+	}
+
+	return true
+}
+
+func (s *Store) Delete(key string) error{
+	
+	pathKey := s.PathTransformFunc(key)
+
+	defer func (){
+		log.Printf("Deleted [%s] from disk", pathKey.Filename)
+	}()
+	
+	//os.RemoveAll removes the entire directory tree
+	return os.RemoveAll(pathKey.FullPath())
+}
+
+
+func (s *Store) Read(key string) (io.Reader, error){
+
+	f, err := s.readStream(key)
 
 	if err != nil{
 		return nil, err
 	}
-	
+
+	//defer makes sure the file is closed before the Read func ends
+	defer f.Close()
+
+	buf := new(bytes.Buffer)
+
+	_, err = io.Copy(buf, f)
+
+	return buf, err
+}
+
+func (s *Store) readStream(key string) (io.ReadCloser, error){
+	pathKey := s.PathTransformFunc(key)
+
+	return os.Open(pathKey.FullPath())
+
 }
 
 func (s *Store) writeStream(key string, r io.Reader) error{
@@ -114,6 +155,8 @@ func (s *Store) writeStream(key string, r io.Reader) error{
 	if err != nil{
 		return err
 	}
+
+	defer f.Close()
 
 	n, err := io.Copy(f, r)
 

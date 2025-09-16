@@ -141,7 +141,7 @@ func (s *Store) Delete(key string) error{
 }
 
 func (s *Store) Write(key string, r io.Reader) error{
-	return s.writeStream(key, r)
+	return s.writeStream(key,r)
 }
 
 

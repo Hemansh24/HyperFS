@@ -2,8 +2,8 @@ package p2p
 
 import (
 	"fmt"
+	"log"
 	"net"
-
 )
 
 //TCPPeer represents a remote node/peer in a TCP connection
@@ -87,6 +87,8 @@ func(t *TCPTransport) ListenAndAccept() error{
 	}
 
 	go t.startAcceptLoop()
+
+	log.Printf("TCP Transport Listening on Port: %s\n", t.ListenAddr)
 
 	return nil
 

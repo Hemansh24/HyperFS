@@ -69,6 +69,8 @@ func (p PathKey) FirstPathName() string {
 	return paths[0]
 }
 
+//Adds both PathName of a Pathkey and 
+// the filename of a Pathkey
 func (p PathKey) FullPath() string{
 	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
 }
@@ -113,7 +115,9 @@ func NewStore(opts StoreOpts) *Store{
 func (s *Store) Has(key string) bool{
 	pathKey := s.PathTransformFunc(key)
 
-	_, err := os.Stat(pathKey.FullPath())
+	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
+
+	_, err := os.Stat(fullPathWithRoot)
 
 	if errors.Is(err, os.ErrNotExist){
 
@@ -121,6 +125,10 @@ func (s *Store) Has(key string) bool{
 	}
 
 	return true
+}
+
+func (s *Store) Clear() error{
+	return os.RemoveAll(s.Root)
 }
 
 func (s *Store) Delete(key string) error{
@@ -131,7 +139,7 @@ func (s *Store) Delete(key string) error{
 		log.Printf("Deleted [%s] from disk", pathKey.Filename)
 	}()
 
-	firstPathNameWithRoot := fmt.Sprintf("%s%s", s.Root, pathKey.FirstPathName())
+	firstPathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FirstPathName())
 	
 	//os.RemoveAll removes the entire directory tree
 	return os.RemoveAll(firstPathNameWithRoot)
@@ -159,7 +167,7 @@ func (s *Store) Read(key string) (io.Reader, error){
 func (s *Store) readStream(key string) (io.ReadCloser, error){
 	pathKey := s.PathTransformFunc(key)
 
-	fullPathKeyWithRoot := fmt.Sprintf("%s%s", s.Root, pathKey.FullPath())
+	fullPathKeyWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
 
 	return os.Open(fullPathKeyWithRoot)
 
@@ -170,7 +178,7 @@ func (s *Store) writeStream(key string, r io.Reader) error{
 	//transform the key into a path
 	pathKey := s.PathTransformFunc(key)
 
-	pathNameWithRoot := fmt.Sprintf("%s%s", s.Root, pathKey.PathName)
+	pathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.PathName)
 
 	//MKdirAll makes the directory if it does not exist using
 	//the path name as the directory name
@@ -181,7 +189,7 @@ func (s *Store) writeStream(key string, r io.Reader) error{
 
 	fullPath := pathKey.FullPath()
 
-	fullPathWithRoot := fmt.Sprintf("%s%s", s.Root, fullPath)
+	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, fullPath)
 
 	f, err := os.Create(fullPathWithRoot)
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Hemansh24/HyperFS/p2p"
 )
@@ -43,6 +44,12 @@ func (s *FileServer) Stop(){
 }
 
 func (s *FileServer) loop(){
+
+	defer func(){
+		log.Println("File server stopped, user quit action")
+		s.Transport.Close()
+	}()
+
 
 	for{
 		select {

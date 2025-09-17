@@ -21,4 +21,6 @@ type Transport interface{
 	//of RPC type
 	Consume() <- chan RPC
 
+	Close() error
+
 }

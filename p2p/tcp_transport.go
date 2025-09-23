@@ -83,6 +83,25 @@ func (t *TCPTransport) Close() error{
 	return t.listener.Close()
 }
 
+//This initaites an outbound call to other peers
+//which means we can connect to those and then move on
+//to the peers in that network
+func (t *TCPTransport) Dial(addr string) error{
+
+	conn, err := net.Dial("tcp", addr)
+
+	if err != nil{
+		return err
+	}
+
+	fmt.Println(conn)
+
+	go t.handleConn(conn, true)
+
+	return nil
+
+}
+
 func(t *TCPTransport) ListenAndAccept() error{
 
 	var err error
@@ -118,12 +137,12 @@ func (t *TCPTransport) startAcceptLoop(){
 
 		
 		fmt.Printf("New Incoming Connection %+v\n", conn)
-		go t.handleConn(conn)
+		go t.handleConn(conn, false)
 	}
 }
 
 
-func (t *TCPTransport) handleConn(conn net.Conn){
+func (t *TCPTransport) handleConn(conn net.Conn, outbound bool){
 
 	var err error
 
@@ -136,7 +155,7 @@ func (t *TCPTransport) handleConn(conn net.Conn){
 
 
 
-	peer := NewTCPPeer(conn, true)
+	peer := NewTCPPeer(conn, outbound)
 
 	
 	if err = t.HandshakeFunc(peer); err != nil{

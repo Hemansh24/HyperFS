@@ -14,6 +14,8 @@ type Peer interface{
 
 type Transport interface{
 
+	Dial(string) error
+
 	ListenAndAccept() error
 
 	// This is a method for receiving messages from the network
@@ -22,5 +24,7 @@ type Transport interface{
 	Consume() <- chan RPC
 
 	Close() error
+
+	
 
 }

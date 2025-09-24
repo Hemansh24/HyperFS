@@ -61,6 +61,18 @@ func (t *TCPTransport) Consume() <- chan RPC{
 	return t.rpcch
 }
 
+func (p *TCPPeer) Send(b []byte) error{
+	_, err := p.conn.Write(b)
+
+	return err
+}
+
+//RemoteAddr return the remote address 
+// of its underlying connection.
+func (p *TCPPeer) RemoteAddr() net.Addr{
+	return p.conn.RemoteAddr()
+}
+
 //Close inplements the Peer interface method
 func (p *TCPPeer) Close() error{
 	return p.conn.Close()
@@ -94,7 +106,6 @@ func (t *TCPTransport) Dial(addr string) error{
 		return err
 	}
 
-	fmt.Println(conn)
 
 	go t.handleConn(conn, true)
 
@@ -136,7 +147,6 @@ func (t *TCPTransport) startAcceptLoop(){
 		}
 
 		
-		fmt.Printf("New Incoming Connection %+v\n", conn)
 		go t.handleConn(conn, false)
 	}
 }

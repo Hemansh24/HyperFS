@@ -14,8 +14,6 @@ func makeServer(listenAddr string, nodes ...string)*FileServer{
 
 		Decoder: 		p2p.DefaultDecoder{},
 
-		//TODO OnPeer func
-
 	}
 
 	tcpTransport := p2p.NewTCPTransport(tcpTransportOpts)
@@ -28,7 +26,13 @@ func makeServer(listenAddr string, nodes ...string)*FileServer{
 
 	}
 
-	return NewFileServer(fileServerOpts)
+	s := NewFileServer(fileServerOpts)
+
+	//To implement the OnPeer func, we need to have a server running
+	tcpTransport.OnPeer = s.OnPeer
+
+
+	return s
 
 	
 }

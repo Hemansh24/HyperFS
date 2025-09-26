@@ -6,12 +6,11 @@ import "net"
 //anyone that we connect to or that connects to us is a peer
 type Peer interface{
 
+	net.Conn
+
 	Send(([]byte)) 	error
 
-	RemoteAddr() 	net.Addr
-
-	Close() 		error 
-
+ 
 }
 
 //Transport is anything that handles the communication

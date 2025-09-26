@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
+	"io"
+
 	"log"
 	"sync"
 
@@ -44,6 +48,49 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 	}
 }
 
+
+
+func (s *FileServer) Broadcast(p Payload) error{
+
+	peers := []io.Writer{}
+
+	for _,peer := range(s.peers){
+		peers = append(peers, peer)
+	}
+
+	mw := io.MultiWriter(peers...)
+	
+	return gob.NewEncoder(mw).Encode(p)
+} 
+type Payload struct{
+
+	Key 	string
+	Data 	[]byte
+}
+
+func (s *FileServer) StoreData(key string, r io.Reader) error{
+
+	// 1. Store this file in disk
+
+	// 2. Broadcast this file to every known peer in the network
+
+	if err := s.store.Write(key, r); err != nil{
+		 return err
+	}
+
+	buf := new(bytes.Buffer)
+	_, err := io.Copy(buf, r)
+
+	if err != nil{
+		return err
+	}
+
+	fmt.Println(buf.Bytes())
+
+	return nil
+
+}
+
 func (s *FileServer) Stop(){
 	close(s.qiutch)
 
@@ -60,7 +107,7 @@ func (s *FileServer) OnPeer(p p2p.Peer) error{
 
 	log.Printf("connected with remote peer %s", p.RemoteAddr())
 
-	return nil
+	return nil 
 }
 
 func (s *FileServer) loop(){

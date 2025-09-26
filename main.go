@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"log"
+	"strings"
+	"time"
+
 	"github.com/Hemansh24/HyperFS/p2p"
 )
 
@@ -18,8 +22,10 @@ func makeServer(listenAddr string, nodes ...string)*FileServer{
 
 	tcpTransport := p2p.NewTCPTransport(tcpTransportOpts)
 
+	safeStorageRoot := strings.TrimPrefix(listenAddr, ":") + "_network"
+
 	fileServerOpts := FileServerOpts{
-		StorageRoot: 		listenAddr + "_network",
+		StorageRoot: 		safeStorageRoot,
 		PathTransformFunc: 	CASPathTransformFunc,
 		Transport: 			tcpTransport,	
 		BootstrapNodes: 	nodes,
@@ -37,17 +43,25 @@ func makeServer(listenAddr string, nodes ...string)*FileServer{
 	
 }
 
-func main(){
+func main() {
+    s1 := makeServer(":3000", "")
+    s2 := makeServer(":4000", ":3000")
 
-	s1 := makeServer(":3000", "")
+    go func() {
+        log.Fatal(s1.Start())
+    }()
 
-	s2 := makeServer(":4000", ":3000")
+    go func() {
+        log.Fatal(s2.Start())
+    }()
 
-	go func(){
-		log.Fatal(s1.Start())
-	}()
+    // Give servers a moment to connect
+    time.Sleep(1 * time.Second)
 
-	s2.Start()
-	
 
+    data := []byte("my special data")
+    s2.StoreData("mydata", bytes.NewReader(data))
+ 
+
+    
 }

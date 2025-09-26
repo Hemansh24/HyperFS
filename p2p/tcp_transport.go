@@ -10,8 +10,9 @@ import (
 //TCPPeer represents a remote node/peer in a TCP connection
 type TCPPeer struct {
 
-	//conn is the underlying connection to the peer
-	conn net.Conn 
+	//conn is the underlying connection to the peer, which
+	//in this case is a TCP conn
+	net.Conn 
 
 	//If we request to connect to a peer, then outbound is true
 	//if we accept and retrieve a conn then inbound is true
@@ -23,7 +24,7 @@ type TCPPeer struct {
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer{
 
 	return &TCPPeer{
-		conn : conn,
+		Conn : conn,
 		outbound : outbound,
 	}
 }
@@ -62,21 +63,12 @@ func (t *TCPTransport) Consume() <- chan RPC{
 }
 
 func (p *TCPPeer) Send(b []byte) error{
-	_, err := p.conn.Write(b)
+	_, err := p.Conn.Write(b)
 
 	return err
 }
 
-//RemoteAddr return the remote address 
-// of its underlying connection.
-func (p *TCPPeer) RemoteAddr() net.Addr{
-	return p.conn.RemoteAddr()
-}
 
-//Close inplements the Peer interface method
-func (p *TCPPeer) Close() error{
-	return p.conn.Close()
-}
 
 
 //This is a constructor function that returns a new instance of TCPTransport
@@ -105,7 +97,6 @@ func (t *TCPTransport) Dial(addr string) error{
 	if err != nil{
 		return err
 	}
-
 
 	go t.handleConn(conn, true)
 
@@ -145,6 +136,8 @@ func (t *TCPTransport) startAcceptLoop(){
 		if(err != nil){
 			fmt.Printf("TCP Accept Error: %s\n", err)
 		}
+
+		fmt.Printf("New Incoming Connection %+v\n", conn)
 
 		
 		go t.handleConn(conn, false)
@@ -193,8 +186,6 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool){
 		rpc.From = conn.RemoteAddr()
 
 		t.rpcch <- rpc
-
-		fmt.Printf("message : %+v\n", rpc)
 
 	}
 

@@ -30,6 +30,4 @@ type Transport interface{
 
 	Close() error
 
-	
-
 }

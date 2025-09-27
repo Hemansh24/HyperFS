@@ -51,17 +51,18 @@ func main() {
         log.Fatal(s1.Start())
     }()
 
-    go func() {
-        log.Fatal(s2.Start())
-    }()
+    time.Sleep(4 * time.Second)
+
+    go s2.Start()
+   
 
     // Give servers a moment to connect
-    time.Sleep(1 * time.Second)
+    time.Sleep(4 * time.Second)
 
 
     data := []byte("my special data")
     s2.StoreData("mydata", bytes.NewReader(data))
  
-
+	select{}
     
 }

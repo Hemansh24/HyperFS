@@ -189,9 +189,16 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool){
 
 		//returns the network address of the remote peer
 		rpc.From = conn.RemoteAddr().String()
+
+		//makes sure that the system is paused till
+		//the current task is completed
 		peer.Wg.Add(1) 
 		fmt.Println("Waiting till Stream is done")
+
+		//rpc message containing metadata is sent to 
+		//FileServer.loop for processing
 		t.rpcch <- rpc
+		
 		peer.Wg.Wait()
 		fmt.Println("Stream Done")
 

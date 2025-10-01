@@ -1,14 +1,14 @@
 package main
+//Capital is public
 
 import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
 	"io"
-	"time"
-
 	"log"
 	"sync"
+	"time"
 
 	"github.com/Hemansh24/HyperFS/p2p"
 )
@@ -72,7 +72,9 @@ type Message struct{
 	Payload any
 }
 
-
+type MessageStoreFile struct{
+	Key string
+}
 
 func (s *FileServer) StoreData(key string, r io.Reader) error{
 
@@ -83,13 +85,16 @@ func (s *FileServer) StoreData(key string, r io.Reader) error{
 	buf := new(bytes.Buffer)
 	
 	msg := Message{
-		Payload: []byte("storagekey"),
+		Payload: MessageStoreFile{
+			Key : key,
+		},
 	}
-
+	//encodes the storage key for transmission
 	if err := gob.NewEncoder(buf).Encode(msg); err != nil{
 		return err
 	}
 
+	//sends the small, gob encoded metadata message to every peer
 	for _, peer := range(s.peers){
 
 		if err := peer.Send(buf.Bytes()); err != nil{
@@ -101,6 +106,7 @@ func (s *FileServer) StoreData(key string, r io.Reader) error{
 
 	payload := []byte("This Large File")
 
+	//sends the payload message to every peer
 	for _, peer := range(s.peers){
 
 		if err := peer.Send(payload); err != nil{
@@ -168,21 +174,26 @@ func (s *FileServer) loop(){
 		case rpc := <- s.Transport.Consume():
 
 			var msg Message
-
+			//decodes the msg struct
 			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&msg); err != nil{
 				log.Println(err)
+				return
 			}
-			fmt.Printf("recv: %s\n", string(msg.Payload.([]byte)))
 
+			fmt.Printf("Payload: %+v\n", msg.Payload)
 			peer, ok := s.peers[rpc.From]
-
+			//means the peer that sent the message is not in the
+			//peer map
 			if !ok {
 			panic("peer not found in peer map")
 			}
 			b := make([]byte, 1000)
+			//it means the system expects that the same peer
+			//will now send a data message
 			if _, err := peer.Read(b); err != nil{
 				panic(err)
 			}
+			//prints "This Large File"
 			fmt.Printf("%s\n", string(b))
 
 			peer.(*p2p.TCPPeer).Wg.Done()
@@ -252,4 +263,8 @@ func (s *FileServer) Start() error{
 
 	return nil
 
+}
+
+func init(){
+	gob.Register(MessageStoreFile{})
 }

@@ -140,7 +140,7 @@ func (s *Store) Delete(key string) error{
 	return os.RemoveAll(firstPathNameWithRoot)
 }
 
-func (s *Store) Write(key string, r io.Reader) error{
+func (s *Store) Write(key string, r io.Reader) (int64, error){
 	return s.writeStream(key,r)
 }
 
@@ -172,7 +172,7 @@ func (s *Store) readStream(key string) (io.ReadCloser, error){
 
 }
 
-func (s *Store) writeStream(key string, r io.Reader) error{
+func (s *Store) writeStream(key string, r io.Reader) (int64 ,error){
 
 	//transform the key into a path
 	pathKey := s.PathTransformFunc(key)
@@ -183,7 +183,7 @@ func (s *Store) writeStream(key string, r io.Reader) error{
 	//the path name as the directory name
 	//os.ModePerm uses the default permissions which are read write execute
 	if err := os.MkdirAll(pathNameWithRoot, os.ModePerm); err != nil{
-		return err
+		return 0, err
 	}
 
 	fullPath := pathKey.FullPath()
@@ -193,7 +193,7 @@ func (s *Store) writeStream(key string, r io.Reader) error{
 	f, err := os.Create(fullPathWithRoot)
 
 	if err != nil{
-		return err
+		return 0, err
 	}
 
 	defer f.Close()
@@ -201,11 +201,11 @@ func (s *Store) writeStream(key string, r io.Reader) error{
 	n, err := io.Copy(f, r)
 
 	if err != nil{
-		return err
+		return 0, err
 	}
 
 	log.Printf("written (%d) bytes to disk: %s", n, fullPathWithRoot)
 
-	return nil
+	return n, nil
 }
 

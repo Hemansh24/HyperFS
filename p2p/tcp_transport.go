@@ -1,5 +1,4 @@
 package p2p
-
 import (
 	"errors"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 
 //TCPPeer represents a remote node/peer in a TCP connection
 type TCPPeer struct {
-
 	//conn is the underlying connection to the peer, which
 	//in this case is a TCP conn
 	net.Conn 
@@ -19,13 +17,10 @@ type TCPPeer struct {
 	//if we accept and retrieve a conn then inbound is true
 	//and outbound is false
 	outbound bool
-
 	Wg *sync.WaitGroup
-
 }
 
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer{
-
 	return &TCPPeer{
 		Conn : conn,
 		outbound : outbound,
@@ -34,7 +29,6 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer{
 }
 
 type TCPTransportOpts struct{
-
 	//This stores the address of the peer as a string 
 	ListenAddr 		string
 
@@ -45,43 +39,30 @@ type TCPTransportOpts struct{
 	//This will be used to decode the incoming messages from the peer
 	Decoder			Decode
 
-
 	//This function will be called when a new peer connects
 	OnPeer 			func(Peer) error 
 }
 
 type TCPTransport struct{
-
 	TCPTransportOpts
 	//This will listen to the address above and hand over the incoming conncections
 	listener net.Listener 
-
 	rpcch chan RPC
-
 }
-
-
 
 func (p *TCPPeer) Send(b []byte) error{
 	_, err := p.Conn.Write(b)
-
 	return err
 }
 
-
-
-
 //This is a constructor function that returns a new instance of TCPTransport
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport{
-
 	//creates a new instance of TCPTransport and returns a pointer to it
 	return &TCPTransport{
 		TCPTransportOpts : 	opts,
-		rpcch: 				make(chan RPC),
+		rpcch: 				make(chan RPC, 1024),
 	}
 }
-
-
 
 //Consume represents the Transport interface method, which will
 //return read only channel of RPC messages. recieved from another peer
@@ -150,58 +131,44 @@ func (t *TCPTransport) startAcceptLoop(){
 }
 
 
-func (t *TCPTransport) handleConn(conn net.Conn, outbound bool){
-
+func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	var err error
 
-	defer func(){
-	fmt.Printf("Dropping Peer Conn: %s", err)
-
-	conn.Close()
-
+	defer func() {
+		fmt.Printf("dropping peer connection: %s", err)
+		conn.Close()
 	}()
-
-
 
 	peer := NewTCPPeer(conn, outbound)
 
-	
-	if err = t.HandshakeFunc(peer); err != nil{
-		return 
+	if err = t.HandshakeFunc(peer); err != nil {
+		return
 	}
 
-	if t.OnPeer != nil{
-		if err = t.OnPeer(peer); err != nil{
+	if t.OnPeer != nil {
+		if err = t.OnPeer(peer); err != nil {
 			return
 		}
 	}
 
-	rpc := RPC{}
-
-	
-	for{
-
+	// Read loop
+	for {
+		rpc := RPC{}
 		err = t.Decoder.Decode(conn, &rpc)
-
-		if err != nil{
+		if err != nil {
 			return
 		}
 
-		//returns the network address of the remote peer
 		rpc.From = conn.RemoteAddr().String()
 
-		//makes sure that the system is paused till
-		//the current task is completed
-		peer.Wg.Add(1) 
-		fmt.Println("Waiting till Stream is done")
+		if rpc.Stream {
+			peer.Wg.Add(1)
+			fmt.Printf("[%s] incoming stream, waiting...\n", conn.RemoteAddr())
+			peer.Wg.Wait()
+			fmt.Printf("[%s] stream closed, resuming read loop\n", conn.RemoteAddr())
+			continue
+		}
 
-		//rpc message containing metadata is sent to 
-		//FileServer.loop for processing
 		t.rpcch <- rpc
-		
-		peer.Wg.Wait()
-		fmt.Println("Stream Done")
-
 	}
-
 }

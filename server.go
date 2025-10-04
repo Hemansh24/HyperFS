@@ -72,7 +72,6 @@ func (s *FileServer) stream(msg *Message) error {
 func (s *FileServer) broadcast(msg *Message) error {
 
 	buf := new(bytes.Buffer)
-
 	//encodes the storage key for transmission
 	if err := gob.NewEncoder(buf).Encode(msg); err != nil{
 		return err
@@ -80,6 +79,7 @@ func (s *FileServer) broadcast(msg *Message) error {
 
 	//sends the small, gob encoded metadata message to every peer
 	for _, peer := range(s.peers){
+		peer.Send([]byte{p2p.IncomingMessage})
 		if err := peer.Send(buf.Bytes()); err != nil{
 			return err
 		}
@@ -116,6 +116,18 @@ func (s *FileServer) Get(key string) (io.Reader, error){
 		return nil, err
 	}
 
+	for _, peer := range s.peers{
+		fmt.Println("Recieving stream from peer", peer.RemoteAddr())
+
+		fileBuffer := new(bytes.Buffer)
+		n, err := io.CopyN(fileBuffer,peer, 22)
+		if err != nil{
+			return nil, err
+		}
+		fmt.Println("Recieved bytes over the network: ", n)
+		fmt.Println(fileBuffer.String())
+	}
+
 	select{}
 	return nil, nil
 }
@@ -129,8 +141,6 @@ func (s *FileServer) Store(key string, r io.Reader) error{
 		filebuffer = new(bytes.Buffer)
 		tee = io.TeeReader(r, filebuffer)
 	)
-	
-
 	size, err := s.store.Write(key, tee)
 	if err != nil{
 		 return err
@@ -145,10 +155,12 @@ func (s *FileServer) Store(key string, r io.Reader) error{
 	if err := s.broadcast(&msg); err != nil{
 		return err
 	}
-	time.Sleep(time.Second * 3)
+
+	time.Sleep(time.Millisecond * 5)
 
 	//sends the payload message to every peer
 	for _, peer := range(s.peers){
+		peer.Send([]byte{p2p.IncomingStream})
 		n, err := io.Copy(peer, filebuffer)
 		if err != nil{
 			return err
@@ -186,8 +198,6 @@ func (s *FileServer) loop(){
 		s.Transport.Close()
 	}()
 
-	
-
 	for{
 		select {
 
@@ -223,6 +233,7 @@ func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error
 		return fmt.Errorf("need to serve file but (%s) does not exist on disk", msg.Key)
 	}
 
+	fmt.Printf("Serving file (%s) over the network\n", msg.Key)
 	r, err := s.store.Read(msg.Key)
 	if err != nil{
 		return err
@@ -243,7 +254,6 @@ func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error
 
 func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) error{
 	peer, ok := s.peers[from]
-
 	if !ok{
 		return fmt.Errorf("peer (%s) could not be found in the peer list", from)
 	}
@@ -252,11 +262,8 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 	if err != nil{
 		return err
 	}
-
 	fmt.Printf("written %d bytes to disk \n", n)
-
 	peer.(*p2p.TCPPeer).Wg.Done()
-
 	return nil
 
 }
@@ -264,15 +271,12 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 //allows the new file server to connect to already exisiting
 //p2p netwrork, by dialing down a knwon bootstrap nodes
 func (s *FileServer) boostrapNetwork() error{
-
 	//loops through a list of network address stroed in BsN
 	//these are already expected to be running
 	for _, addr := range(s.BootstrapNodes){
-	
 		if len(addr) == 0{
 			continue
 		}
-	
 		go func (addr string) {
 			fmt.Println("Attempting to connect with remote ", addr)
 
@@ -287,21 +291,16 @@ func (s *FileServer) boostrapNetwork() error{
 		} (addr)
 
 	}
-
 	return nil
 }
 
 func (s *FileServer) Start() error{
-
 	if err := s.Transport.ListenAndAccept(); err != nil{
 		return err
 	}
-	
 	s.boostrapNetwork()
 	s.loop()
-
 	return nil
-
 }
 
 func init(){

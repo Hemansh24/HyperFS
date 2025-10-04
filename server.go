@@ -1,6 +1,5 @@
 package main
 //Capital is public
-
 import (
 	"bytes"
 	"encoding/gob"
@@ -48,8 +47,6 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 		peers: 			make(map[string]p2p.Peer),
 	}
 }
-
-
 
 func (s *FileServer) stream(msg *Message) error {
 	buf := new(bytes.Buffer)
@@ -262,8 +259,8 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 	if err != nil{
 		return err
 	}
-	fmt.Printf("written %d bytes to disk \n", n)
-	peer.(*p2p.TCPPeer).Wg.Done()
+	fmt.Printf("[%s] written %d bytes to disk \n",s.Transport.Addr(), n)
+	peer.CloseStream()
 	return nil
 
 }

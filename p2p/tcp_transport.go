@@ -17,15 +17,19 @@ type TCPPeer struct {
 	//if we accept and retrieve a conn then inbound is true
 	//and outbound is false
 	outbound bool
-	Wg *sync.WaitGroup
+	wg *sync.WaitGroup
 }
 
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer{
 	return &TCPPeer{
 		Conn : conn,
 		outbound : outbound,
-		Wg: 	&sync.WaitGroup{},
+		wg: 	&sync.WaitGroup{},
 	}
+}
+
+func (p *TCPPeer) CloseStream() {
+	p.wg.Done()
 }
 
 type TCPTransportOpts struct{
@@ -62,6 +66,11 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport{
 		TCPTransportOpts : 	opts,
 		rpcch: 				make(chan RPC, 1024),
 	}
+}
+//Addr implements tranport interface, returns the address
+//from which the transport is accepting connections
+func (t *TCPTransport) Addr() string{
+	return t.ListenAddr
 }
 
 //Consume represents the Transport interface method, which will
@@ -162,9 +171,9 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		rpc.From = conn.RemoteAddr().String()
 
 		if rpc.Stream {
-			peer.Wg.Add(1)
+			peer.wg.Add(1)
 			fmt.Printf("[%s] incoming stream, waiting...\n", conn.RemoteAddr())
-			peer.Wg.Wait()
+			peer.wg.Wait()
 			fmt.Printf("[%s] stream closed, resuming read loop\n", conn.RemoteAddr())
 			continue
 		}

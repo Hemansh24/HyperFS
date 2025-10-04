@@ -1,8 +1,8 @@
 package main
 
 import (
-	//"bytes"
 	"bytes"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -58,11 +58,11 @@ func main() {
    
 
     // Give servers a moment to connect
-    time.Sleep(2 * time.Second)
+    time.Sleep(5 * time.Millisecond)
 
 	for i := 0; i < 10; i++ {
 		data := bytes.NewReader([]byte("My big data file here!"))
-		s2.Store("mydata", data)
+		s2.Store(fmt.Sprintf("mydata_%d", i), data)
 		time.Sleep(5 * time.Millisecond)
 	}
 

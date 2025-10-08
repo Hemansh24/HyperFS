@@ -1,8 +1,9 @@
 package main
 
 import (
-	"bytes"
+	// "bytes"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -58,30 +59,24 @@ func main() {
    
 
     // Give servers a moment to connect
-    time.Sleep(5 * time.Millisecond)
+    time.Sleep(1 * time.Second)
 
-	for i := 0; i < 10; i++ {
-		data := bytes.NewReader([]byte("My big data file here!"))
-		s2.Store(fmt.Sprintf("mydata_%d", i), data)
-		time.Sleep(5 * time.Millisecond)
+	// data := bytes.NewReader([]byte("My big data file here!"))
+	// s2.Store("coolPicture.jgp",data)
+	// time.Sleep(5 * time.Millisecond)
+
+	r, err := s2.Get("coolPicture.jgp")
+
+	if err != nil{
+		log.Fatal(err)
 	}
 
+	b, err := io.ReadAll(r)
+	if err != nil{
+		log.Fatal(err)
+	}
 
-    
-
-	// r, err := s2.Get("mydata")
-
-	// if err != nil{
-	// 	log.Fatal(err)
-	// }
-
-	// b, err := io.ReadAll(r)
-	// if err != nil{
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println(string(b))
+	fmt.Println(string(b))
  
-	select{}
     
 }

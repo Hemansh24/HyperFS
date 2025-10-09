@@ -103,7 +103,8 @@ type MessageGetFile struct{
 func (s *FileServer) Get(key string) (io.Reader, error){
 	if s.store.Has(key){
 		fmt.Printf("[%s] serving file (%s) from local\n", s.Transport.Addr(), key)
-		return s.store.Read(key)
+		_, r, err := s.store.Read(key)
+		return r, err
 	}
 	fmt.Printf("[%s] Dont have file (%s) locally, fetching from network... \n", s.Transport.Addr(), key)
 	msg := Message{
@@ -128,18 +129,16 @@ func (s *FileServer) Get(key string) (io.Reader, error){
 			return nil, err
 		}
 
-		fmt.Printf("[%s] Recieved bytes (%d) over the network from (%s)",s.Transport.Addr(), n, peer.RemoteAddr())
+		fmt.Printf("[%s] Recieved bytes (%d) over the network from (%s)\n",s.Transport.Addr(), n, peer.RemoteAddr())
 		peer.CloseStream()
 	}
 
-	return s.store.Read(key)
+	_, r, err := s.store.Read(key)
+	return r, err
 }
 
 func (s *FileServer) Store(key string, r io.Reader) error{
 
-	// 1. Store this file in disk
-
-	// 2. Broadcast this file to every known peer in the network
 	var (
 		filebuffer = new(bytes.Buffer)
 		tee = io.TeeReader(r, filebuffer)
@@ -237,9 +236,14 @@ func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error
 	}
 
 	fmt.Printf("[%s] Serving file (%s) over the network\n",s.Transport.Addr(), msg.Key)
-	r, err := s.store.Read(msg.Key)
+	fileSize, r, err := s.store.Read(msg.Key)
 	if err != nil{
 		return err
+	}
+
+	if rc, flag := r.(io.ReadCloser); flag{
+		fmt.Println("Closing ReadCloser")
+		defer rc.Close()
 	}
 
 	peer, ok := s.peers[from]
@@ -249,7 +253,6 @@ func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error
 	//first send the "IncomingStream" byte to the peer and then we can send the file size
 	//as an INT64
 	peer.Send([]byte{p2p.IncomingStream})
-	var fileSize int64 = 22
 	binary.Write(peer, binary.LittleEndian, fileSize)
 	n, err := io.Copy(peer, r)
 	if err != nil{

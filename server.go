@@ -15,10 +15,11 @@ import (
 )
 
 type FileServerOpts struct {
-	StorageRoot       string
-	PathTransformFunc PathTransformFunc
-	Transport         p2p.Transport
-	BootstrapNodes	  []string
+	Enckey 				[]byte
+	StorageRoot       	string
+	PathTransformFunc 	PathTransformFunc
+	Transport         	p2p.Transport
+	BootstrapNodes	  	[]string
 }
 
 type FileServer struct{
@@ -151,7 +152,7 @@ func (s *FileServer) Store(key string, r io.Reader) error{
 	msg := Message{
 		Payload: MessageStoreFile{
 			Key : key,
-			Size: size,
+			Size: size + 16,
 		},
 	}
 	if err := s.broadcast(&msg); err != nil{
@@ -163,11 +164,16 @@ func (s *FileServer) Store(key string, r io.Reader) error{
 	//sends the payload message to every peer
 	for _, peer := range(s.peers){
 		peer.Send([]byte{p2p.IncomingStream})
-		n, err := io.Copy(peer, filebuffer)
+		n, err := copyEncrypt(s.Enckey, filebuffer, peer)
 		if err != nil{
 			return err
 		}
+		// n, err := io.Copy(peer, filebuffer)
+		// if err != nil{
+		// 	return err
+		// }
 		fmt.Println("recv and written to disk: ", n)
+		time.Sleep(time.Second * 1)
 	}
 
 	return nil

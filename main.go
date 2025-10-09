@@ -1,9 +1,9 @@
 package main
 
 import (
-	// "bytes"
-	"fmt"
-	"io"
+	"bytes"
+	// "fmt"
+	// "io"
 	"log"
 	"strings"
 	"time"
@@ -27,6 +27,7 @@ func makeServer(listenAddr string, nodes ...string)*FileServer{
 	safeStorageRoot := strings.TrimPrefix(listenAddr, ":") + "_network"
 
 	fileServerOpts := FileServerOpts{
+		Enckey: 			newEncryptionkey(),		
 		StorageRoot: 		safeStorageRoot,
 		PathTransformFunc: 	CASPathTransformFunc,
 		Transport: 			tcpTransport,	
@@ -39,10 +40,7 @@ func makeServer(listenAddr string, nodes ...string)*FileServer{
 	//To implement the OnPeer func, we need to have a server running
 	tcpTransport.OnPeer = s.OnPeer
 
-
 	return s
-
-	
 }
 
 func main() {
@@ -56,27 +54,23 @@ func main() {
     time.Sleep(2 * time.Second)
 
     go s2.Start()
-   
 
     // Give servers a moment to connect
     time.Sleep(1 * time.Second)
 
-	// data := bytes.NewReader([]byte("My big data file here!"))
-	// s2.Store("coolPicture.jgp",data)
-	// time.Sleep(5 * time.Millisecond)
+	data := bytes.NewReader([]byte("My big data file here!"))
+	s2.Store("coolPicture.jpg",data)
 
-	r, err := s2.Get("coolPicture.jgp")
+	// r, err := s2.Get("coolPicture.jgp")
 
-	if err != nil{
-		log.Fatal(err)
-	}
+	// if err != nil{
+	// 	log.Fatal(err)
+	// }
 
-	b, err := io.ReadAll(r)
-	if err != nil{
-		log.Fatal(err)
-	}
+	// b, err := io.ReadAll(r)
+	// if err != nil{
+	// 	log.Fatal(err)
+	// }
 
-	fmt.Println(string(b))
- 
-    
+	// fmt.Println(string(b))
 }

@@ -2,12 +2,11 @@ package main
 
 import (
 	"bytes"
-	// "fmt"
-	// "io"
+	"fmt"
+	"io"
 	"log"
 	"strings"
 	"time"
-
 	"github.com/Hemansh24/HyperFS/p2p"
 )
 
@@ -58,19 +57,27 @@ func main() {
     // Give servers a moment to connect
     time.Sleep(1 * time.Second)
 
-	data := bytes.NewReader([]byte("My big data file here!"))
-	s2.Store("coolPicture.jpg",data)
+	for i := 0; i < 20; i++ {
 
-	// r, err := s2.Get("coolPicture.jgp")
-
-	// if err != nil{
-	// 	log.Fatal(err)
-	// }
-
-	// b, err := io.ReadAll(r)
-	// if err != nil{
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println(string(b))
+		key := fmt.Sprintf("picture_%d.png",i)
+		data := bytes.NewReader([]byte("My big data file here!"))
+		s2.Store(key,data)
+	
+		if err := s2.store.Delete(key); err != nil{
+			log.Fatal(err)
+		}
+	
+		r, err := s2.Get(key)
+	
+		if err != nil{
+			log.Fatal(err)
+		}
+	
+		b, err := io.ReadAll(r)
+		if err != nil{
+			log.Fatal(err)
+		}
+	
+		fmt.Println(string(b))
+	}
 }
